@@ -269,18 +269,22 @@ END_OF_MAIN()
 #include <allegro.h>
 #include <math.h>
 #include "stdio.h"
+#include "time.h"
 
-#include "All_Textures.h"
-#include "sky.h"
-#include "title.h"
-#include "won.h"
-#include "lost.h"
-#include "sprites.h"
+#include "textures/All_Textures.h"
+#include "textures/sky.h"
+#include "textures/title.h"
+#include "textures/won.h"
+#include "textures/lost.h"
+#include "textures/sprites.h"
+#include "textures/sprites_2.h"
+
 
 float degToRad(float a) { return (float)(a*M_PI/180.0);}
 float FixAng(float a){ if(a>359){ a-=360;} if(a<0){ a+=360;} return a;}
 float distance(float ax,float ay, float bx,float by,float ang){ return cosf(degToRad(ang))*(bx-ax)-sinf(degToRad(ang))*(by-ay);}
-float px,py,pdx,pdy,pdx2,pdy2,pa;
+float Distance(float ax,float ay, float bx,float by){ return sqrtf((bx-ax)*(bx-ax)+(by-ay)*(by-ay));}
+float px,py,pdx,pdy,pdx2,pdy2,pdx3,pdy3,pa;
 int gameState=0, timer=0; //game state. init, start screen, game loop, win/lose
 float fade=0;             //the 3 screens can fade up from black
 
@@ -297,7 +301,19 @@ int mapW[]=          //walls
                 1,0,0,4,0,2,0,2,
                 1,5,4,5,0,0,0,2,
                 2,0,0,0,0,0,0,1,
-                2,0,0,0,0,1,0,1,
+                2,0,0,0,0,4,0,1,
+                2,0,0,0,0,0,0,1,
+                1,1,1,1,1,1,1,1,
+        };
+
+int mapW2[]=          //walls
+        {
+                1,1,1,1,2,2,2,2,
+                6,0,0,0,0,0,0,2,
+                1,0,0,0,0,0,0,2,
+                1,0,0,0,0,0,0,2,
+                2,0,0,0,0,0,0,1,
+                2,0,0,0,0,0,0,1,
                 2,0,0,0,0,0,0,1,
                 1,1,1,1,1,1,1,1,
         };
@@ -320,11 +336,29 @@ int mapC[]=          //ceiling
                 0,0,0,0,0,0,0,0,
                 0,0,0,0,0,0,0,0,
                 0,0,0,0,0,0,0,0,
-                0,4,2,4,0,0,0,0,
-                0,0,2,0,0,0,0,0,
-                0,0,2,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,0,
                 0,0,0,0,0,0,0,0,
         };
+
+
+void drawMap2D(BITMAP *buffer)
+{
+    int x,y,xo,yo;
+    for(y=0;y<mapY;y++)
+    {
+        for(x=0;x<mapX;x++)
+        {
+
+            xo=x*mapS/2; yo=y*mapS/2;
+            if(mapW[y*mapX+x]>0){ rectfill(buffer,xo+1, yo+1,mapS/2+xo-1,mapS/2+yo-1, makecol(255,255,255));} else{ rectfill(buffer,xo+1, yo+1,mapS+xo-1,mapS+yo-1, makecol(0,0,0));}
+
+        }
+    }
+}//-----------------------------------------------------------------------------
+
+
 
 
 typedef struct       //All veriables per sprite
@@ -335,7 +369,6 @@ typedef struct       //All veriables per sprite
     float x,y,z;        //position
 }sprite; sprite sp[4];
 int depth[120];      //hold wall line depth to compare for sprite depth
-
 
 
 int mouseTurnX()
@@ -356,7 +389,7 @@ int mouseTurnX()
     }
 }
 
-void drawSprite(BITMAP *buffer)
+void drawSprite(BITMAP *buffer, int *MapW)
 {
     int x,y,s;
     if(px<sp[0].x+30 && px>sp[0].x-30 && py<sp[0].y+30 && py>sp[0].y-30){ sp[0].state=0;} //pick up key
@@ -366,13 +399,14 @@ void drawSprite(BITMAP *buffer)
     int spx=(int)sp[3].x>>6,          spy=(int)sp[3].y>>6;          //normal grid position
     int spx_add=((int)sp[3].x+15)>>6, spy_add=((int)sp[3].y+15)>>6; //normal grid position plus     offset
     int spx_sub=((int)sp[3].x-15)>>6, spy_sub=((int)sp[3].y-15)>>6; //normal grid position subtract offset
-    if(sp[3].x>px && mapW[spy*8+spx_sub]==0){ sp[3].x-=1;}
-    if(sp[3].x<px && mapW[spy*8+spx_add]==0){ sp[3].x+=1;}
-    if(sp[3].y>py && mapW[spy_sub*8+spx]==0){ sp[3].y-=1;}
-    if(sp[3].y<py && mapW[spy_add*8+spx]==0){ sp[3].y+=1;}
+    if(sp[3].x>px && MapW[spy*8+spx_sub]==0){ sp[3].x-=1;}
+    if(sp[3].x<px && MapW[spy*8+spx_add]==0){ sp[3].x+=1;}
+    if(sp[3].y>py && MapW[spy_sub*8+spx]==0){ sp[3].y-=1;}
+    if(sp[3].y<py && MapW[spy_add*8+spx]==0){ sp[3].y+=1;}
 
     for(s=0;s<4;s++)
     {
+        int red,blue,green;
         float sx=sp[s].x-px; //temp float variables
         float sy=sp[s].y-py;
         float sz=sp[s].z;
@@ -399,10 +433,19 @@ void drawSprite(BITMAP *buffer)
                 if(sp[s].state==1 && x>0 && x<120 && b<(float)depth[x])
                 {
                     int pixel=((int)t_y*32+(int)t_x)*3+(sp[s].map*32*32*3);
-                    int red   =sprites[pixel+0];
-                    int green =sprites[pixel+1];
-                    int blue  =sprites[pixel+2];
-                    if(red!=255, green!=0, blue!=255) //dont draw if purple
+                    if(sp[s].type==3)
+                    {
+                        red   =sprites_2[pixel+0];
+                        green =sprites_2[pixel+1];
+                        blue  =sprites_2[pixel+2];
+                    }
+                    else
+                    {
+                        red   =sprites[pixel+0];
+                        green =sprites[pixel+1];
+                        blue  =sprites[pixel+2];
+                    }
+                    if(red!=255&&green!=0&&blue!=255) //dont draw if purple
                     {
                         rectfill(buffer,x*8,(int)sy*8-y*8,x*8+8,(int)sy*8-y*8+8, makecol(red,green,blue)); //draw point
                     }
@@ -414,9 +457,18 @@ void drawSprite(BITMAP *buffer)
     }
 }
 
+//------------------------PLAYER------------------------------------------------
+void drawPlayer2D(BITMAP *buffer)
+{
+    circlefill(buffer,px/2,py/2,4, makecol(255,0,0));
+    circlefill(buffer,sp[3].x/2,sp[3].y/2,4, makecol(255,255,0));
+    line(buffer,px/2,py/2,px/2+pdx/2*20,py/2+pdy/2*20, makecol(255,255,0));
+    line(buffer,px/2,py/2,px/2+pdx2/2*20,py/2+pdy2/2*20, makecol(255,255,0));
+    line(buffer,px/2,py/2,px/2+pdx3/2*20,py/2+pdy3/2*20, makecol(255,255,0));
+}
 
 //---------------------------Draw Rays and Walls--------------------------------
-void drawRays2D(BITMAP *buffer)
+void drawRays2D(BITMAP *buffer, int *MapW)
 {
     int r,mx,my,mp,dof,side; float vx,vy,rx,ry,ra,xo,yo,disV,disH;
 
@@ -435,7 +487,7 @@ void drawRays2D(BITMAP *buffer)
         while(dof<8)
         {
             mx=(int)(rx)>>6; my=(int)(ry)>>6; mp=my*mapX+mx;
-            if(mp>0 && mp<mapX*mapY && mapW[mp]>0){ vmt=mapW[mp]-1; dof=8; disV=cosf(degToRad(ra))*(rx-px)-sinf(degToRad(ra))*(ry-py);}//hit
+            if(mp>0 && mp<mapX*mapY && MapW[mp]>0){ vmt=MapW[mp]-1; dof=8; disV=cosf(degToRad(ra))*(rx-px)-sinf(degToRad(ra))*(ry-py);}//hit
             else{ rx+=xo; ry+=yo; dof+=1;}                                               //check next horizontal
         }
         vx=rx; vy=ry;
@@ -450,7 +502,7 @@ void drawRays2D(BITMAP *buffer)
         while(dof<8)
         {
             mx=(int)(rx)>>6; my=(int)(ry)>>6; mp=my*mapX+mx;
-            if(mp>0 && mp<mapX*mapY && mapW[mp]>0){ hmt=mapW[mp]-1; dof=8; disH=cosf(degToRad(ra))*(rx-px)-sinf(degToRad(ra))*(ry-py);}//hit
+            if(mp>0 && mp<mapX*mapY && MapW[mp]>0){ hmt=MapW[mp]-1; dof=8; disH=cosf(degToRad(ra))*(rx-px)-sinf(degToRad(ra))*(ry-py);}//hit
             else{ rx+=xo; ry+=yo; dof+=1;}                                               //check next horizontal
         }
 
@@ -524,6 +576,18 @@ void drawSky(BITMAP *buffer)     //draw sky and rotate based on player rotation
     }
 }
 
+SAMPLE * importeSon(char *nomDeFichier)
+{
+    SAMPLE *sonARendre= load_sample(nomDeFichier);
+    if(!sonARendre)
+    {
+        allegro_message("ne peut pas ouvrir %s",nomDeFichier);
+        allegro_exit();
+        exit(EXIT_FAILURE);
+    }
+    return sonARendre;
+}
+
 void screenGame(int v,BITMAP *buffer) //draw any full screen image. 120x80 pixels
 {
     int x,y;
@@ -560,9 +624,13 @@ void init()//init all variables when game starts
     }
     install_keyboard();
     install_mouse();
+    install_sound(DIGI_AUTODETECT,MIDI_AUTODETECT,NULL);
 
     px=150; py=400; pa=90;
-    pdx=cosf(degToRad(pa)); pdy=-sinf(degToRad(pa));                                 //init player
+    pdx=cosf(degToRad(pa)); pdy=-sinf(degToRad(pa));
+    pdx2=cosf(degToRad(pa)+M_PI/2); pdy2=-sinf(degToRad(pa)+M_PI/2);
+    pdx3=cosf(degToRad(pa)-(float )(M_PI/2));  pdy3=-sinf(degToRad(pa)-(float )(M_PI/2));
+    //init player
     mapW[19]=4; mapW[26]=4; //close doors
 
     sp[0].type=1; sp[0].state=1; sp[0].map=0; sp[0].x=1.5f*64; sp[0].y=5*64;   sp[0].z=20; //key
@@ -576,12 +644,14 @@ int displayGame(BITMAP *buffer)
 {
 
     if(gameState==0){  fade=0; timer=0; gameState=1;} //init game
-    if(gameState==1){ timer+=20; if(timer>2000){ fade=0; timer=0; gameState=2;}} //start screen
+    if(gameState==1){ timer+=20; if(timer>100){ fade=0; timer=0; gameState=2;}} //start screen
     if(gameState==2) //The main game loop
     {
         drawSky(buffer);
-        drawRays2D(buffer);
-        drawSprite(buffer);
+        drawRays2D(buffer,mapW);
+        drawSprite(buffer,mapW);
+        drawMap2D(buffer);
+        drawPlayer2D(buffer);
         //y position and offset
         if( (int)px>>6==1 && (int)py>>6==1 ){ fade=0; timer=0; gameState=3;} //Entered block 1, Win game!!
     }
@@ -591,7 +661,7 @@ int displayGame(BITMAP *buffer)
     return 0;
 }
 
-void Button()                                  //keyboard button pressed down
+void Button(int *MapW)                                  //keyboard button pressed down
 {
 
 
@@ -606,23 +676,23 @@ void Button()                                  //keyboard button pressed down
     int ipy3=(int)(py/64.0), ipy_add_yo3=((int)py+yo3)/64, ipy_subb_yo3=((int)py-yo3)/64;
 
 
-    if(mouseTurnX()==2){ pa+=15; pa= FixAng(pa); pdx=cosf(degToRad(pa)); pdy=-sinf(degToRad(pa)); pdx2=cosf(degToRad(pa)+(float )(M_PI/2));  pdy2=-sinf(degToRad(pa)+(float )(M_PI/2)); }
-    if(mouseTurnX()==1){ pa-=15; pa= FixAng(pa) ;pdx=cosf(degToRad(pa)); pdy=-sinf(degToRad(pa)); pdx2=cosf(degToRad(pa)+(float )(M_PI/2));  pdy2=-sinf(degToRad(pa)+(float )(M_PI/2)); }
+    if(mouseTurnX()==2){ pa+=15; pa= FixAng(pa); pdx=cosf(degToRad(pa)); pdy=-sinf(degToRad(pa)); pdx2=cosf(degToRad(pa)+(float )(M_PI/2));  pdy2=-sinf(degToRad(pa)+(float )(M_PI/2)); pdx3=cosf(degToRad(pa)-(float )(M_PI/2));  pdy3=-sinf(degToRad(pa)-(float )(M_PI/2)); }
+    if(mouseTurnX()==1){ pa-=15; pa= FixAng(pa) ;pdx=cosf(degToRad(pa)); pdy=-sinf(degToRad(pa)); pdx2=cosf(degToRad(pa)+(float )(M_PI/2));  pdy2=-sinf(degToRad(pa)+(float )(M_PI/2)); pdx3=cosf(degToRad(pa)-(float )(M_PI/2));  pdy3=-sinf(degToRad(pa)-(float )(M_PI/2)); }
 
 
     if(key[KEY_W]){
-        if(mapW[ipy*mapX+ipx_add_xo]==0){px+=(float)pdx*5;}
-        if(mapW[ipy_add_yo*mapX+ipx]==0){py+=(float)pdy*5;}
+        if(MapW[ipy*mapX+ipx_add_xo]==0){px+=(float)pdx*5;}
+        if(MapW[ipy_add_yo*mapX+ipx]==0){py+=(float)pdy*5;}
     }
     if(key[KEY_S]){
-        if(mapW[ipy*mapX+ipx_subb_xo]==0){px-=(float)pdx*5;}
-        if(mapW[ipy_subb_yo*mapX+ipx]==0){py-=(float)pdy*5;}
+        if(MapW[ipy*mapX+ipx_subb_xo]==0){px-=(float)pdx*5;}
+        if(MapW[ipy_subb_yo*mapX+ipx]==0){py-=(float)pdy*5;}
     }
 
-    if(key[KEY_A]){if(mapW[ipy3*mapX+ipx_add_xo3]==0){px+=pdx2*5;}
-        if(mapW[ipy_add_yo3*mapX+ipx3]==0){py+=pdy2*5;}}
-    if(key[KEY_D]){if(mapW[ipy3*mapX+ipx_subb_xo3]==0){px-=pdx2*5;}
-        if(mapW[ipy_subb_yo3*mapX+ipx3]==0){py-=pdy2*5;}}
+    if(key[KEY_A]){if(MapW[ipy3*mapX+ipx_add_xo3]==0){px+=pdx2*5;}
+        if(MapW[ipy_add_yo3*mapX+ipx3]==0){py+=pdy2*5;}}
+    if(key[KEY_D]){if(MapW[ipy3*mapX+ipx_subb_xo3]==0){px-=pdx2*5;}
+        if(MapW[ipy_subb_yo3*mapX+ipx3]==0){py-=pdy2*5;}}
 
     if(key[KEY_E] && sp[0].state==0)             //open doors
     {
@@ -630,27 +700,72 @@ void Button()                                  //keyboard button pressed down
         if(pdy<0){ yo=-25;} else{ yo=25;}
         ipx=px/64.0; ipx_add_xo=(px+xo)/64.0;
         ipy=py/64.0; ipy_add_yo=(py+yo)/64.0;
-        if(mapW[ipy_add_yo*mapX+ipx_add_xo]==4){ mapW[ipy_add_yo*mapX+ipx_add_xo]=0;}
+        if(MapW[ipy_add_yo*mapX+ipx_add_xo]==4){ MapW[ipy_add_yo*mapX+ipx_add_xo]=0;}
     }
 
+}
+
+int myClock(int diffAfterReset)
+{
+    return clock() - diffAfterReset; // Retourne le temps depuis le dernier reset
+}
+
+void myResetClock( int * diffAfterReset)
+{
+    *diffAfterReset = clock(); // Met le compteur au véritable temps
 }
 
 int main()
 {
     init();
     int GameLoop=0;
+    int volumeDist=10;
+    int pano=128;
+    float ratioDistance=0;
+    int ClockForSprite = 0; // Le moment du dernier reset
+    clock_t tempsSprite, tempsOperationDebut, tempsOperationFin;
+
     BITMAP *buffer= create_bitmap(SCREEN_W,SCREEN_H);
+    SAMPLE * pasDeMonstre= importeSon("../music_de_pas.wav");
+    play_sample(pasDeMonstre,255,128,1000,TRUE);
     while(!key[KEY_ESC])
     {
-        clear(buffer);
+        tempsOperationDebut=clock();
+        tempsSprite= myClock(ClockForSprite);
+        clear_bitmap(buffer);
         GameLoop=displayGame(buffer);
-        Button();
+        Button(mapW);
         blit(buffer,screen,0,0,0,0,SCREEN_W,SCREEN_H);
         if(GameLoop==1)
         {
             break;
         }
+        ratioDistance=Distance(sp[3].x,sp[3].y,px+pdx2*20,py+pdy2*20)/Distance(sp[3].x,sp[3].y,px+pdx3*20,py+pdy3*20);
+        if(Distance(sp[3].x,sp[3].y,px+pdx2*20,py+pdy2*20)> Distance(sp[3].x,sp[3].y,px+pdx3*20,py+pdy3*20))
+        {
+            pano=(int)((128+50)*ratioDistance);
+        }
+        else if(Distance(sp[3].x,sp[3].y,px+pdx2*20,py+pdy2*20)< Distance(sp[3].x,sp[3].y,px+pdx3*20,py+pdy3*20))
+        {
+            pano=(int)((128-50)*ratioDistance);
+        }
+        else
+        {
+            pano=(int)(128*ratioDistance);
+        }
+        adjust_sample(pasDeMonstre,(int)((float)255/(Distance(sp[3].x,sp[3].y,px,py)/35)),pano,1000,TRUE);
+        if(tempsSprite>100)
+        {
+            sp[3].map++;
+            if(sp[3].map>2)
+            {
+                sp[3].map=0;
+            }
+            myResetClock(&ClockForSprite);
+        }
+        tempsOperationFin=clock();
     }
+    stop_sample(pasDeMonstre);
     allegro_exit();
     return 0;
 }

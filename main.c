@@ -541,9 +541,9 @@ void drawRays2D(BITMAP *buffer, int *MapW)
             ty=py/2 - sinf(deg)*158*2*32/dy/raFix;
             mp=mapF[(int)(ty/32.0)*mapX+(int)(tx/32.0)]*32*32;
             int pixel=(((int)(ty)&31)*32 + ((int)(tx)&31))*3+mp*3;
-            int red   =All_Textures[pixel+0]*0.7;
-            int green =All_Textures[pixel+1]*0.7;
-            int blue  =All_Textures[pixel+2]*0.7;
+            int red   =(int)((float )All_Textures[pixel+0]*0.7);
+            int green =(int)((float )All_Textures[pixel+0]*0.7);
+            int blue  =(int)((float )All_Textures[pixel+0]*0.7);
             rectfill(buffer,r*8,y,r*8+8,y+8, makecol(red,green,blue));
 
             //---draw ceiling---
@@ -599,9 +599,9 @@ void screenGame(int v,BITMAP *buffer) //draw any full screen image. 120x80 pixel
         for(x=0;x<120;x++)
         {
             int pixel=(y*120+x)*3;
-            int red   =T[pixel+0]*fade;
-            int green =T[pixel+1]*fade;
-            int blue  =T[pixel+2]*fade;
+            int red   =(int)((float )T[pixel+0]*fade);
+            int green =(int)((float )T[pixel+1]*fade);
+            int blue  =(int)((float )T[pixel+2]*fade);
             rectfill(buffer,x*8,y*8,x*8+8,y*8+8, makecol(red,green,blue));
         }
     }
@@ -609,6 +609,18 @@ void screenGame(int v,BITMAP *buffer) //draw any full screen image. 120x80 pixel
     if(fade>1){ fade=1;}
 }
 
+
+BITMAP * importeImage(char *nomDeFichier)
+{
+    BITMAP *imageARendre= load_bitmap(nomDeFichier,NULL);
+    if(!imageARendre)
+    {
+        allegro_message("ne peut pas ouvrir %s",nomDeFichier);
+        allegro_exit();
+        exit(EXIT_FAILURE);
+    }
+    return imageARendre;
+}
 
 
 
@@ -628,7 +640,7 @@ void init()//init all variables when game starts
 
     px=150; py=400; pa=90;
     pdx=cosf(degToRad(pa)); pdy=-sinf(degToRad(pa));
-    pdx2=cosf(degToRad(pa)+M_PI/2); pdy2=-sinf(degToRad(pa)+M_PI/2);
+    pdx2=cosf(degToRad(pa)+(float )M_PI/2); pdy2=-sinf(degToRad(pa)+(float )M_PI/2);
     pdx3=cosf(degToRad(pa)-(float )(M_PI/2));  pdy3=-sinf(degToRad(pa)-(float )(M_PI/2));
     //init player
     mapW[19]=4; mapW[26]=4; //close doors
@@ -659,6 +671,13 @@ int displayGame(BITMAP *buffer)
     if(gameState==3){ screenGame(2,buffer); timer+=10; if(timer>2000){ fade=0; timer=0; gameState=0; return 1;}} //won screen
     if(gameState==4){ screenGame(3,buffer); timer+=10; if(timer>2000){ fade=0; timer=0; gameState=0;return 1;}} //lost screen
     return 0;
+}
+
+
+
+void shootPistolAnimation(BITMAP *buffer,BITMAP **animations, int frame)
+{
+    draw_sprite(buffer,animations[frame],300,150);
 }
 
 void Button(int *MapW)                                  //keyboard button pressed down
@@ -719,22 +738,52 @@ int main()
 {
     init();
     int GameLoop=0;
-    int volumeDist=10;
+    int volumeDist;
+    int frame=1;
     int pano=128;
     float ratioDistance=0;
-    int ClockForSprite = 0; // Le moment du dernier reset
-    clock_t tempsSprite, tempsOperationDebut, tempsOperationFin;
-
+    int BoolAnimation=0;
+    int ClockForSprite = 0, ClokcForAnimation =0; // Le moment du dernier reset
+    clock_t tempsSpriteMonstre, tempsOperationDebut, tempsOperationFin, tempsAnimationShootPistol;
+    char NomDeFichier[500];
     BITMAP *buffer= create_bitmap(SCREEN_W,SCREEN_H);
-    SAMPLE * pasDeMonstre= importeSon("../music_de_pas.wav");
+    BITMAP *shootPistol[5];
+    for(int i=1;i<5;i++)
+    {
+        sprintf(NomDeFichier,"../images/shoot pistol/%d.bmp",i);
+        shootPistol[i]= importeImage(NomDeFichier);
+    }
+    SAMPLE * pasDeMonstre= importeSon("../son/Robot pas.wav");
     play_sample(pasDeMonstre,255,128,1000,TRUE);
     while(!key[KEY_ESC])
     {
         tempsOperationDebut=clock();
-        tempsSprite= myClock(ClockForSprite);
+        tempsSpriteMonstre= myClock(ClockForSprite);
         clear_bitmap(buffer);
         GameLoop=displayGame(buffer);
         Button(mapW);
+        shootPistolAnimation(buffer,shootPistol,frame);
+        line(buffer,SCREEN_W/2-10,SCREEN_H/2,SCREEN_W/2+10,SCREEN_H/2, makecol(255,0,0));
+        line(buffer,SCREEN_W/2,SCREEN_H/2-10,SCREEN_W/2,SCREEN_H/2+10, makecol(255,0,0));
+        if(mouse_b==1)
+        {
+            BoolAnimation=1;
+        }
+        if(BoolAnimation)
+        {
+            tempsAnimationShootPistol= myClock(ClokcForAnimation);
+            if(tempsAnimationShootPistol>75)
+            {
+                frame++;
+                myResetClock(&ClokcForAnimation);
+            }
+            if(frame>4)
+            {
+                BoolAnimation=0;
+                frame=1;
+            }
+        }
+
         blit(buffer,screen,0,0,0,0,SCREEN_W,SCREEN_H);
         if(GameLoop==1)
         {
@@ -754,7 +803,7 @@ int main()
             pano=(int)(128*ratioDistance);
         }
         adjust_sample(pasDeMonstre,(int)((float)255/(Distance(sp[3].x,sp[3].y,px,py)/35)),pano,1000,TRUE);
-        if(tempsSprite>100)
+        if(tempsSpriteMonstre>300)
         {
             sp[3].map++;
             if(sp[3].map>2)

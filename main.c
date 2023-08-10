@@ -620,11 +620,10 @@ int HitMonster(float spx,float spy, int *MapW, BITMAP*buffer)
 
         if(rx>spx-5&& rx<spx+5 && ry>spy-5&& ry<spy+5)
         {
-            printf("Monster Hit\n");
+            line(buffer,px/2,py/2,rx/2,ry/2, makecol(0,255,0));
+            return 1;
         }
     }
-
-
     line(buffer,px/2,py/2,rx/2,ry/2, makecol(0,255,0));
     return 0;
 }
@@ -838,6 +837,10 @@ int main()
         line(buffer,SCREEN_W/2,SCREEN_H/2-10,SCREEN_W/2,SCREEN_H/2+10, makecol(255,0,0));
         if(mouse_b==1)
         {
+            if(HitMonster(sp[3].x,sp[3].y,mapW,buffer))
+            {
+                sp[3].state= !sp[3].state;
+            }
             BoolAnimation=1;
         }
         if(BoolAnimation)

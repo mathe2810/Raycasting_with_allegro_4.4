@@ -482,7 +482,7 @@ void drawRays2D(BITMAP *buffer, int *MapW)
         float Tan=tanf(degToRad(ra));
         if(cosf(degToRad(ra))> 0.001){ rx=(((int)px>>6)<<6)+64;      ry=(px-rx)*Tan+py; xo= 64; yo=-xo*Tan;}//looking left
         else if(cosf(degToRad(ra))<-0.001){ rx=(((int)px>>6)<<6) -0.0001; ry=(px-rx)*Tan+py; xo=-64; yo=-xo*Tan;}//looking right
-        else { rx=px; ry=py; dof=8;}                                                  //looking up or down. no hit
+        else { rx=px; ry=py; dof=8;}//looking up or down. no hit
 
         while(dof<8)
         {
@@ -491,6 +491,7 @@ void drawRays2D(BITMAP *buffer, int *MapW)
             else{ rx+=xo; ry+=yo; dof+=1;}                                               //check next horizontal
         }
         vx=rx; vy=ry;
+
 
         //---Horizontal---
         dof=0; disH=100000;
@@ -508,6 +509,7 @@ void drawRays2D(BITMAP *buffer, int *MapW)
 
         float shade=1;
         if(disV<disH){ hmt=vmt; shade=0.5f; rx=vx; ry=vy; disH=disV; }//horizontal hit first
+
 
         int ca=(int)FixAng(pa-ra); disH=disH*cosf(degToRad((float)ca));                            //fix fisheye
         int lineH =(int)((mapS*640.0f)/(disH));
@@ -558,6 +560,74 @@ void drawRays2D(BITMAP *buffer, int *MapW)
         ra=FixAng(ra-0.5f);                                                               //go to next ray, 60 total
     }
 }//-----------------------------------------------------------------------------
+
+
+int HitMonster(float spx,float spy, int *MapW, BITMAP*buffer)
+{
+    /*int r,mx,my,mp,dof,side; float vx,vy,rx,ry,ra,xo,yo,disV,disH;
+
+    ra=FixAng(pa);                                                              //ray set back 30 degrees
+    int vmt=0,hmt=0;                                                              //vertical and horizontal map texture number
+    //---Vertical---
+    dof=0; side=0; disV=100000;
+    float Tan=tanf(degToRad(ra));
+    if(cosf(degToRad(ra))> 0.001){ rx=(((int)px>>6)<<6)+64;      ry=(px-rx)*Tan+py; xo= 64; yo=-xo*Tan;}//looking left
+    else if(cosf(degToRad(ra))<-0.001){ rx=(((int)px>>6)<<6) -0.0001; ry=(px-rx)*Tan+py; xo=-64; yo=-xo*Tan;}//looking right
+    else { rx=px; ry=py; dof=8;}//looking up or down. no hit
+
+    while(dof<8)
+    {
+    mx=(int)(rx)>>6; my=(int)(ry)>>6; mp=my*mapX+mx;
+    if(mp>0 && mp<mapX*mapY && MapW[mp]>0){ vmt=MapW[mp]-1; dof=8; disV=cosf(degToRad(ra))*(rx-px)-sinf(degToRad(ra))*(ry-py);}//hit
+    else{ rx+=xo; ry+=yo; dof+=1; if(rx==spx&&ry==spy){return 1;} }                                               //check next horizontal
+    }
+    vx=rx; vy=ry;
+
+
+    //---Horizontal---
+    dof=0; disH=100000;
+    Tan=1.0f/Tan;
+    if(sinf(degToRad(ra))> 0.001){ ry=(((int)py>>6)<<6) -0.0001; rx=(py-ry)*Tan+px; yo=-64; xo=-yo*Tan;}//looking up
+    else if(sinf(degToRad(ra))<-0.001){ ry=(((int)py>>6)<<6)+64;      rx=(py-ry)*Tan+px; yo= 64; xo=-yo*Tan;}//looking down
+    else{ rx=px; ry=py; dof=8;}                                                   //looking straight left or right
+
+    while(dof<8)
+    {
+      mx=(int)(rx)>>6; my=(int)(ry)>>6; mp=my*mapX+mx;
+      if(mp>0 && mp<mapX*mapY && MapW[mp]>0){ hmt=MapW[mp]-1; dof=8; disH=cosf(degToRad(ra))*(rx-px)-sinf(degToRad(ra))*(ry-py);}//hit
+      else{ rx+=xo; ry+=yo; dof+=1;}                                               //check next horizontal
+    }
+
+    if(disV<disH){ hmt=vmt; rx=vx; ry=vy; disH=disV; }//horizontal hit first*/
+
+
+    float rx,ry;
+
+    int mp,mx,my;
+
+    rx=px;
+    ry=py;
+    for(int i=0;i<300;i++)
+    {
+        rx+=pdx;
+        ry+=pdy;
+        mx=(int)(rx)>>6; my=(int)(ry)>>6; mp=my*mapX+mx;
+
+        if(mp>0 && mp<mapX*mapY && MapW[mp]>0)
+        {
+            break;
+        }
+
+        if(rx>spx-5&& rx<spx+5 && ry>spy-5&& ry<spy+5)
+        {
+            printf("Monster Hit\n");
+        }
+    }
+
+
+    line(buffer,px/2,py/2,rx/2,ry/2, makecol(0,255,0));
+    return 0;
+}
 
 
 void drawSky(BITMAP *buffer)     //draw sky and rotate based on player rotation
@@ -664,6 +734,7 @@ int displayGame(BITMAP *buffer)
         drawSprite(buffer,mapW);
         drawMap2D(buffer);
         drawPlayer2D(buffer);
+        HitMonster(sp[3].x,sp[3].y,mapW,buffer);
         //y position and offset
         if( (int)px>>6==1 && (int)py>>6==1 ){ fade=0; timer=0; gameState=3;} //Entered block 1, Win game!!
     }
@@ -695,8 +766,8 @@ void Button(int *MapW)                                  //keyboard button presse
     int ipy3=(int)(py/64.0), ipy_add_yo3=((int)py+yo3)/64, ipy_subb_yo3=((int)py-yo3)/64;
 
 
-    if(mouseTurnX()==2){ pa+=15; pa= FixAng(pa); pdx=cosf(degToRad(pa)); pdy=-sinf(degToRad(pa)); pdx2=cosf(degToRad(pa)+(float )(M_PI/2));  pdy2=-sinf(degToRad(pa)+(float )(M_PI/2)); pdx3=cosf(degToRad(pa)-(float )(M_PI/2));  pdy3=-sinf(degToRad(pa)-(float )(M_PI/2)); }
-    if(mouseTurnX()==1){ pa-=15; pa= FixAng(pa) ;pdx=cosf(degToRad(pa)); pdy=-sinf(degToRad(pa)); pdx2=cosf(degToRad(pa)+(float )(M_PI/2));  pdy2=-sinf(degToRad(pa)+(float )(M_PI/2)); pdx3=cosf(degToRad(pa)-(float )(M_PI/2));  pdy3=-sinf(degToRad(pa)-(float )(M_PI/2)); }
+    if(mouseTurnX()==2){ pa+=8; pa= FixAng(pa); pdx=cosf(degToRad(pa)); pdy=-sinf(degToRad(pa)); pdx2=cosf(degToRad(pa)+(float )(M_PI/2));  pdy2=-sinf(degToRad(pa)+(float )(M_PI/2)); pdx3=cosf(degToRad(pa)-(float )(M_PI/2));  pdy3=-sinf(degToRad(pa)-(float )(M_PI/2)); }
+    if(mouseTurnX()==1){ pa-=8; pa= FixAng(pa) ;pdx=cosf(degToRad(pa)); pdy=-sinf(degToRad(pa)); pdx2=cosf(degToRad(pa)+(float )(M_PI/2));  pdy2=-sinf(degToRad(pa)+(float )(M_PI/2)); pdx3=cosf(degToRad(pa)-(float )(M_PI/2));  pdy3=-sinf(degToRad(pa)-(float )(M_PI/2)); }
 
 
     if(key[KEY_W]){

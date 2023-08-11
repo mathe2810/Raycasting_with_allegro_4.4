@@ -6,6 +6,7 @@
 #include "../includes/fonction_allegro.h"
 
 #include "../textures/All_Textures.h"
+#include "../textures/All_Textures2.h"
 #include "../textures/sky.h"
 #include "../textures/title.h"
 #include "../textures/won.h"
@@ -29,15 +30,52 @@ float fade=0;             //the 3 screens can fade up from black
 #define mapY  8      //map height
 #define mapS 64      //map cube size
 
-//Edit these 3 arrays with values 0-4 to create your own level!
+//Edit these 3 arrays with values 0-68 to create your own level!
+
+/*
+ * 1-Dirt
+ * 2-Rocks Blue
+ * 3-Gold
+ * 4-Rocks Blue 2
+ * 5-Ice cube
+ * 6-Magma cube
+ * 7-Rocks cube 3
+ * 8-Dirt 2
+ * 9-Bricks 1
+ * 10-Wall 1
+ * 11-Wall 2
+ * 12-Light 1
+ * 13-Wall 3
+ * 14-Electric Wall 1
+ * 15-Electric Wall 2
+ * 16-Light 2
+ * 17-Wall Electrical 1
+ * 18-Wall Electrical 2
+ * 19-Electrical WALL 1
+ * 20-Electrical Wall 2
+ * 21-Light 3
+ * 22-Bricks 2
+ * 23-Dark Brick
+ * 24-Glass sol
+ * 25-Wall 4
+ * 26-Metal Wall
+ * 27-Gray
+ * 28-Window
+ *
+ */
+
+//52 53 54
+
+
+
 int mapW[]=          //walls
         {
                 1,1,1,1,2,2,2,2,
                 6,0,0,1,0,0,0,2,
-                1,0,0,4,0,2,0,2,
-                1,5,4,5,0,0,0,2,
-                2,0,0,0,0,0,0,1,
-                2,0,0,0,0,4,0,1,
+                1,0,0,54,0,2,0,2,
+                1,52,54,53,0,0,0,2,
+                28,0,0,0,0,0,0,1,
+                2,0,0,0,0,54,0,1,
                 2,0,0,0,0,0,0,1,
                 1,1,1,1,1,1,1,1,
         };
@@ -70,11 +108,11 @@ int mapC[]=          //ceiling
         {
                 0,0,0,0,0,0,0,0,
                 0,0,0,0,0,0,0,0,
+                0,24,0,0,0,0,0,0,
                 0,0,0,0,0,0,0,0,
                 0,0,0,0,0,0,0,0,
                 0,0,0,0,0,0,0,0,
-                0,0,0,0,0,0,0,0,
-                0,0,0,0,0,0,0,0,
+                0,0,23,0,0,0,0,0,
                 0,0,0,0,0,0,0,0,
         };
 
@@ -103,8 +141,37 @@ typedef struct       //All veriables per sprite
     int state;          //on off
     int map;            //texture to show
     float x,y,z;        //position
-}sprite; sprite sp[4];
+    SAMPLE *son;        //émet un son
+}sprite; sprite sp[5];
 int depth[120];      //hold wall line depth to compare for sprite depth
+
+
+void permuter(float *a, float *b) {
+    float tmp;
+    tmp = *a;
+    *a = *b;
+    *b = tmp;
+}
+void triRapid(float tab[], int first, int last) {
+    int pivot, i, j;
+    if(first < last) {
+        pivot = first;
+        i = first;
+        j = last;
+        while (i < j) {
+            while(tab[i] <= tab[pivot] && i < last)
+                i++;
+            while(tab[j] > tab[pivot])
+                j--;
+            if(i < j) {
+                permuter(&tab[i], &tab[j]);
+            }
+        }
+        permuter(&tab[pivot], &tab[j]);
+        triRapid(tab, first, j - 1);
+        triRapid(tab, j + 1, last);
+    }
+}
 
 
 int mouseTurnX()
@@ -125,73 +192,79 @@ int mouseTurnX()
     }
 }
 
-void drawSprite(BITMAP *buffer, int *MapW, int *gameState)
+void MoovmentOpps(int *MapW, int *gameState, int s, float speed)
 {
-    int x,y,s;
-    if(sp[3].state!=0)
+
+    if(sp[s].state!=0&&sp[s].type==3)
     {
-        if(px<sp[3].x+30 && px>sp[3].x-30 && py<sp[3].y+30 && py>sp[3].y-30){ *gameState=4;} //enemy kills
+        if(px<sp[s].x+30 && px>sp[s].x-30 && py<sp[s].y+30 && py>sp[s].y-30){ *gameState=4;} //enemy kills
         //enemy attack
-        int spx=(int)sp[3].x>>6,          spy=(int)sp[3].y>>6;          //normal grid position
-        int spx_add=((int)sp[3].x+15)>>6, spy_add=((int)sp[3].y+15)>>6; //normal grid position plus     offset
-        int spx_sub=((int)sp[3].x-15)>>6, spy_sub=((int)sp[3].y-15)>>6; //normal grid position subtract offset
-        if(sp[3].x>px && MapW[spy*8+spx_sub]==0){ sp[3].x-=1;}
-        if(sp[3].x<px && MapW[spy*8+spx_add]==0){ sp[3].x+=1;}
-        if(sp[3].y>py && MapW[spy_sub*8+spx]==0){ sp[3].y-=1;}
-        if(sp[3].y<py && MapW[spy_add*8+spx]==0){ sp[3].y+=1;}
+        int spx=(int)sp[s].x>>6,          spy=(int)sp[s].y>>6;          //normal grid position
+        int spx_add=((int)sp[s].x+15)>>6, spy_add=((int)sp[s].y+15)>>6; //normal grid position plus     offset
+        int spx_sub=((int)sp[s].x-15)>>6, spy_sub=((int)sp[s].y-15)>>6; //normal grid position subtract offset
+        if(sp[s].x>px && MapW[spy*8+spx_sub]==0){ sp[s].x-=speed;}
+        if(sp[s].x<px && MapW[spy*8+spx_add]==0){ sp[s].x+=speed;}
+        if(sp[s].y>py && MapW[spy_sub*8+spx]==0){ sp[s].y-=speed;}
+        if(sp[s].y<py && MapW[spy_add*8+spx]==0){ sp[s].y+=speed;}
     }
-    if(px<sp[0].x+30 && px>sp[0].x-30 && py<sp[0].y+30 && py>sp[0].y-30){ sp[0].state=0;} //pick up key
+}
 
-    for(s=0;s<4;s++)
+void keyRammasser(int s)
+{
+    if(px<sp[s].x+30 && px>sp[s].x-30 && py<sp[s].y+30 && py>sp[s].y-30&& sp[s].type==1){ sp[0].state=0;}
+}
+
+void drawSprite(BITMAP *buffer, int *MapW, int *gameState, int s)
+{
+    int x,y;
+    //pick up key
+    int red,blue,green;
+    float sx=sp[s].x-px; //temp float variables
+    float sy=sp[s].y-py;
+    float sz=sp[s].z;
+
+    float CS=cosf(degToRad(pa)), SN=sinf(degToRad(pa)); //rotate around origin
+    float a=sy*CS+sx*SN;
+    float b=sx*CS-sy*SN;
+    sx=a; sy=b;
+
+    sx=(float)(sx*108.0/sy)+(120.0f/2); //convert to screen x,y
+    sy=(float)(sz*108.0/sy)+( 80.0f/2);
+
+    int scale=(int)(32*80/b);   //scale sprite based on distance
+    if(scale<0){ scale=0;} if(scale>120){ scale=120;}
+
+    //texture
+    float t_x=0, t_y=31, t_x_step=31.5f/(float)scale, t_y_step=32.0f/(float)scale;
+
+    for(x=(int)(sx-(float)scale/2);x<(int)(sx+(float)scale/2);x++)
     {
-        int red,blue,green;
-        float sx=sp[s].x-px; //temp float variables
-        float sy=sp[s].y-py;
-        float sz=sp[s].z;
-
-        float CS=cosf(degToRad(pa)), SN=sinf(degToRad(pa)); //rotate around origin
-        float a=sy*CS+sx*SN;
-        float b=sx*CS-sy*SN;
-        sx=a; sy=b;
-
-        sx=(float)(sx*108.0/sy)+(120.0f/2); //convert to screen x,y
-        sy=(float)(sz*108.0/sy)+( 80.0f/2);
-
-        int scale=(int)(32*80/b);   //scale sprite based on distance
-        if(scale<0){ scale=0;} if(scale>120){ scale=120;}
-
-        //texture
-        float t_x=0, t_y=31, t_x_step=31.5f/(float)scale, t_y_step=32.0f/(float)scale;
-
-        for(x=(int)(sx-(float)scale/2);x<(int)(sx+(float)scale/2);x++)
+        t_y=31;
+        for(y=0;y<scale;y++)
         {
-            t_y=31;
-            for(y=0;y<scale;y++)
+            if(sp[s].state==1 && x>0 && x<120 && b<(float)depth[x])
             {
-                if(sp[s].state==1 && x>0 && x<120 && b<(float)depth[x])
+                int pixel=((int)t_y*32+(int)t_x)*3+(sp[s].map*32*32*3);
+                if(sp[s].type==3)
                 {
-                    int pixel=((int)t_y*32+(int)t_x)*3+(sp[s].map*32*32*3);
-                    if(sp[s].type==3)
-                    {
-                        red   =sprites_2[pixel+0];
-                        green =sprites_2[pixel+1];
-                        blue  =sprites_2[pixel+2];
-                    }
-                    else
-                    {
-                        red   =sprites[pixel+0];
-                        green =sprites[pixel+1];
-                        blue  =sprites[pixel+2];
-                    }
-                    if(red!=255&&green!=0&&blue!=255) //dont draw if purple
-                    {
+                    red   =sprites_2[pixel+0];
+                    green =sprites_2[pixel+1];
+                    blue  =sprites_2[pixel+2];
+                }
+                else
+                {
+                    red   =sprites[pixel+0];
+                    green =sprites[pixel+1];
+                    blue  =sprites[pixel+2];
+                }
+                if(red!=255&&green!=0&&blue!=255) //dont draw if purple
+                     {
                         rectfill(buffer,x*8,(int)sy*8-y*8,x*8+8,(int)sy*8-y*8+8, makecol(red,green,blue)); //draw point
                     }
-                    t_y-=t_y_step; if(t_y<0){ t_y=0;}
-                }
+                t_y-=t_y_step; if(t_y<0){ t_y=0;}
             }
-            t_x+=t_x_step;
         }
+        t_x+=t_x_step;
     }
 }
 
@@ -200,6 +273,7 @@ void drawPlayer2D(BITMAP *buffer)
 {
     circlefill(buffer,px/2,py/2,4, makecol(255,0,0));
     circlefill(buffer,sp[3].x/2,sp[3].y/2,4, makecol(255,255,0));
+    circlefill(buffer,sp[4].x/2,sp[4].y/2,4, makecol(255,255,0));
     line(buffer,px/2,py/2,px/2+pdx/2*20,py/2+pdy/2*20, makecol(255,255,0));
     line(buffer,px/2,py/2,px/2+pdx2/2*20,py/2+pdy2/2*20, makecol(255,255,0));
     line(buffer,px/2,py/2,px/2+pdx3/2*20,py/2+pdy3/2*20, makecol(255,255,0));
@@ -266,9 +340,9 @@ void drawRays2D(BITMAP *buffer, int *MapW)
         for(y=0;y<lineH;y++)
         {
             int pixel=((int)ty*32+(int)tx)*3+(hmt*32*32*3);
-            int red   =All_Textures[pixel+0]*shade;
-            int green =All_Textures[pixel+1]*shade;
-            int blue  =All_Textures[pixel+2]*shade;
+            int red   =All_Textures2[pixel+0]*shade;
+            int green =All_Textures2[pixel+1]*shade;
+            int blue  =All_Textures2[pixel+2]*shade;
             rectfill(buffer,r*8,y+lineOff,r*8+8,y+lineOff+8, makecol(red,green,blue));
             ty+=ty_step;
         }
@@ -281,17 +355,17 @@ void drawRays2D(BITMAP *buffer, int *MapW)
             ty=py/2 - sinf(deg)*158*2*32/dy/raFix;
             mp=mapF[(int)(ty/32.0)*mapX+(int)(tx/32.0)]*32*32;
             int pixel=(((int)(ty)&31)*32 + ((int)(tx)&31))*3+mp*3;
-            int red   =(int)((float )All_Textures[pixel+0]*0.7);
-            int green =(int)((float )All_Textures[pixel+0]*0.7);
-            int blue  =(int)((float )All_Textures[pixel+0]*0.7);
+            int red   =(int)((float )All_Textures2[pixel+0]*0.7);
+            int green =(int)((float )All_Textures2[pixel+0]*0.7);
+            int blue  =(int)((float )All_Textures2[pixel+0]*0.7);
             rectfill(buffer,r*8,y,r*8+8,y+8, makecol(red,green,blue));
 
             //---draw ceiling---
             mp=mapC[(int)(ty/32.0)*mapX+(int)(tx/32.0)]*32*32;
             pixel=(((int)(ty)&31)*32 + ((int)(tx)&31))*3+mp*3;
-            red   =All_Textures[pixel+0];
-            green =All_Textures[pixel+1];
-            blue  =All_Textures[pixel+2];
+            red   =All_Textures2[pixel+0];
+            green =All_Textures2[pixel+1];
+            blue  =All_Textures2[pixel+2];
             if(mp>0){ rectfill(buffer,r*8,640-y,r*8+8,640-y+8, makecol(red,green,blue));}
         }
 
@@ -390,12 +464,13 @@ void init()//init all variables when game starts
     pdx2=cosf(degToRad(pa)+(float )M_PI/2); pdy2=-sinf(degToRad(pa)+(float )M_PI/2);
     pdx3=cosf(degToRad(pa)-(float )(M_PI/2));  pdy3=-sinf(degToRad(pa)-(float )(M_PI/2));
     //init player
-    mapW[19]=4; mapW[26]=4; //close doors
+    mapW[19]=54; mapW[26]=54; //close doors
 
     sp[0].type=1; sp[0].state=1; sp[0].map=0; sp[0].x=1.5f*64; sp[0].y=5*64;   sp[0].z=20; //key
     sp[1].type=2; sp[1].state=1; sp[1].map=1; sp[1].x=1.5f*64; sp[1].y=4.5f*64; sp[1].z= 0; //light 1
     sp[2].type=2; sp[2].state=1; sp[2].map=1; sp[2].x=3.5f*64; sp[2].y=4.5f*64; sp[2].z= 0; //light 2
-    sp[3].type=3; sp[3].state=1; sp[3].map=2; sp[3].x=2.5f*64; sp[3].y=2*64;   sp[3].z=20; //enemy
+    sp[3].type=3; sp[3].state=1; sp[3].map=2; sp[3].x=2.5f*64; sp[3].y=2*64;   sp[3].z=20;     sp[3].son= importeSon("../son/Robot pas.wav");//enemy
+    sp[4].type=3; sp[4].state=1; sp[4].map=2; sp[4].x=2.5f*64; sp[4].y=2*64;   sp[4].z=20;     sp[4].son= importeSon("../son/Robot pas.wav"); //enemy
 }
 
 
@@ -453,7 +528,7 @@ void Button(int *MapW)                                  //keyboard button presse
         if(pdy<0){ yo=-25;} else{ yo=25;}
         ipx=px/64.0; ipx_add_xo=(px+xo)/64.0;
         ipy=py/64.0; ipy_add_yo=(py+yo)/64.0;
-        if(MapW[ipy_add_yo*mapX+ipx_add_xo]==4){ MapW[ipy_add_yo*mapX+ipx_add_xo]=0;}
+        if(MapW[ipy_add_yo*mapX+ipx_add_xo]==52||MapW[ipy_add_yo*mapX+ipx_add_xo]==53||MapW[ipy_add_yo*mapX+ipx_add_xo]==54){ MapW[ipy_add_yo*mapX+ipx_add_xo]=0;}
     }
 
 }
@@ -468,16 +543,16 @@ void myResetClock( int * diffAfterReset)
     *diffAfterReset = clock(); // Met le compteur au véritable temps
 }
 
-void soundSprite(SAMPLE *pasDeMonstre)
+void soundSprite(SAMPLE *pasDeMonstre, int s)
 {
     int pano=128;
-    int volumeDist=(int)((float)255/(Distance(sp[3].x,sp[3].y,px,py)/35));
-    float ratioDistance=Distance(sp[3].x,sp[3].y,px+pdx2*20,py+pdy2*20)/Distance(sp[3].x,sp[3].y,px+pdx3*20,py+pdy3*20);
-    if(Distance(sp[3].x,sp[3].y,px+pdx2*20,py+pdy2*20)> Distance(sp[3].x,sp[3].y,px+pdx3*20,py+pdy3*20))
+    int volumeDist=(int)((float)255/(Distance(sp[s].x,sp[s].y,px,py)/35));
+    float ratioDistance=Distance(sp[s].x,sp[s].y,px+pdx2*20,py+pdy2*20)/Distance(sp[s].x,sp[s].y,px+pdx3*20,py+pdy3*20);
+    if(Distance(sp[s].x,sp[s].y,px+pdx2*20,py+pdy2*20)> Distance(sp[s].x,sp[s].y,px+pdx3*20,py+pdy3*20))
     {
         pano=(int)((128+50)*ratioDistance);
     }
-    else if(Distance(sp[3].x,sp[3].y,px+pdx2*20,py+pdy2*20)< Distance(sp[3].x,sp[3].y,px+pdx3*20,py+pdy3*20))
+    else if(Distance(sp[s].x,sp[s].y,px+pdx2*20,py+pdy2*20)< Distance(sp[s].x,sp[s].y,px+pdx3*20,py+pdy3*20))
     {
         pano=(int)((128-50)*ratioDistance);
     }
@@ -485,7 +560,7 @@ void soundSprite(SAMPLE *pasDeMonstre)
     {
         pano=(int)(128*ratioDistance);
     }
-    if(sp[3].state==0)
+    if(sp[s].state==0)
     {
         volumeDist=0;
     }
@@ -499,6 +574,8 @@ int main()
     int frame=1;
     int BoolAnimation=0;
     int animation=0;
+    int tmp=4;
+    float tabAffiche[5];
     int ClockForSprite = 0, ClokcForAnimation =0; // Le moment du dernier reset
     clock_t tempsSpriteMonstre, tempsOperationDebut, tempsOperationFin, tempsAnimationShootPistol;
     char NomDeFichier[500];
@@ -515,8 +592,13 @@ int main()
         sprintf(NomDeFichier,"../images/pistol reload/%d.bmp",i);
         realodPistol[i]= importeImage(NomDeFichier);
     }
-    SAMPLE * pasDeMonstre= importeSon("../son/Robot pas.wav");
-    play_sample(pasDeMonstre,255,128,1000,TRUE);
+    for(int j=0;j<5;j++)
+    {
+        if(sp[j].son!=NULL)
+        {
+            play_sample(sp[j].son,255,128,1000,TRUE);
+        }
+    }
     while(!key[KEY_ESC])
     {
         tempsOperationDebut=clock();
@@ -527,7 +609,36 @@ int main()
             tempsSpriteMonstre= myClock(ClockForSprite);
             drawSky(buffer);
             drawRays2D(buffer,mapW);
-            drawSprite(buffer,mapW,&gameState);
+            for(int s=0;s<5;s++){tabAffiche[s]= Distance(px,py,sp[s].x,sp[s].y);}
+            triRapid(tabAffiche,0,4);
+            while(tmp!=-1)
+            {
+                for(int i=0;i<5;i++)
+                {
+                    if(Distance(px,py,sp[i].x,sp[i].y)==tabAffiche[tmp])
+                    {
+                        drawSprite(buffer,mapW,&gameState,i);
+                    }
+                }
+                tmp--;
+            }
+            tmp=4;
+            for(int s=0;s<5;s++)
+            {
+                if(s==4)
+                {
+                    MoovmentOpps(mapW,&gameState,s,0.5f);
+                }
+                else
+                {
+                    MoovmentOpps(mapW,&gameState,s,1);
+                }
+                if(sp[s].type==3)
+                {
+                    soundSprite(sp[s].son,s);
+                }
+                keyRammasser(s);
+            }
             drawMap2D(buffer);
             drawPlayer2D(buffer);
             HitMonster(sp[3].x,sp[3].y,mapW,buffer);
@@ -562,9 +673,19 @@ int main()
             if(mouse_b==1)
             {
                 animation=1;
-                if(HitMonster(sp[3].x,sp[3].y,mapW,buffer))
+                if(Distance(px,py,sp[3].x,sp[3].y)<Distance(px,py,sp[4].x,sp[4].y))
                 {
-                    sp[3].state= !sp[3].state;
+                    if(HitMonster(sp[3].x,sp[3].y,mapW,buffer))
+                    {
+                        sp[3].state= !sp[3].state;
+                    }
+                }
+                else
+                {
+                    if(HitMonster(sp[4].x,sp[4].y,mapW,buffer))
+                    {
+                        sp[4].state= !sp[4].state;
+                    }
                 }
             }
             if(key[KEY_R]){
@@ -572,14 +693,19 @@ int main()
             }
             if(tempsSpriteMonstre>300)
             {
-                sp[3].map++;
-                if(sp[3].map>2)
+                for(int i=0;i<5;i++)
                 {
-                    sp[3].map=0;
+                    if(sp[i].type==3)
+                    {
+                        sp[i].map++;
+                        if(sp[i].map>2)
+                        {
+                            sp[i].map=0;
+                        }
+                    }
                 }
                 myResetClock(&ClockForSprite);
             }
-            soundSprite(pasDeMonstre);
             //y position and offset
             if( (int)px>>6==1 && (int)py>>6==1 ){ fade=0; timer=0; gameState=3;} //Entered block 1, Win game!!
         }
@@ -592,7 +718,13 @@ int main()
         tempsOperationFin=clock();
         printf("%ld ms\n",(tempsOperationFin-tempsOperationDebut));
     }
-    stop_sample(pasDeMonstre);
+    for(int i=0;i<5;i++)
+    {
+        if(sp[i].son!=NULL)
+        {
+            stop_sample(sp[i].son);
+        }
+    }
     allegro_exit();
     return 0;
 }

@@ -70,14 +70,14 @@ float fade=0;             //the 3 screens can fade up from black
 
 int mapW[]=          //walls
         {
-                1,1,1,1,2,2,2,2,
-                6,0,0,1,0,0,0,2,
-                1,0,0,54,0,2,0,2,
-                1,52,54,53,0,0,0,2,
-                28,0,0,0,0,0,0,1,
-                2,0,0,0,0,54,0,1,
-                2,0,0,0,0,0,0,1,
-                1,1,1,1,1,1,1,1,
+                19,19,19,19,20,20,20,20,
+                6,0,0,19,0,0,0,20,
+                19,0,0,19,0,19,0,20,
+                19,20,54,20,0,0,0,20,
+                20,0,0,0,0,0,0,19,
+                20,0,0,0,0,20,0,19,
+                20,0,0,0,0,0,0,19,
+                19,19,19,19,20,19,19,19,
         };
 
 int mapW2[]=          //walls
@@ -94,26 +94,26 @@ int mapW2[]=          //walls
 
 int mapF[]=          //floors
         {
-                0,0,0,0,0,0,0,0,
-                0,0,0,0,2,2,2,0,
-                0,0,0,0,6,0,2,0,
-                0,0,8,0,2,7,6,0,
-                0,0,2,0,0,0,0,0,
-                0,0,2,0,8,0,0,0,
-                0,1,1,1,1,0,8,0,
-                0,0,0,0,0,0,0,0,
+                23,23,23,23,23,23,23,23,
+                23,23,23,23,23,23,23,23,
+                23,23,23,23,23,23,23,23,
+                23,23,23,23,23,23,23,23,
+                23,23,23,23,23,23,23,23,
+                23,23,23,23,23,23,23,23,
+                23,23,23,23,23,23,23,23,
+                23,23,23,23,23,23,23,23,
         };
 
 int mapC[]=          //ceiling
         {
-                0,0,0,0,0,0,0,0,
-                0,0,0,0,0,0,0,0,
-                0,24,0,0,0,0,0,0,
-                0,0,0,0,0,0,0,0,
-                0,0,0,0,0,0,0,0,
-                0,0,0,0,0,0,0,0,
-                0,0,23,0,0,0,0,0,
-                0,0,0,0,0,0,0,0,
+                20,20,20,20,20,20,20,20,
+                20,0,20,20,0,20,20,20,
+                20,20,20,20,20,20,20,20,
+                20,0,0,20,20,0,20,20,
+                20,0,0,20,20,0,20,20,
+                20,20,20,20,20,20,20,20,
+                20,20,20,20,20,20,20,20,
+                20,20,20,20,20,20,20,20,
         };
 
 
@@ -464,7 +464,6 @@ void init()//init all variables when game starts
     pdx2=cosf(degToRad(pa)+(float )M_PI/2); pdy2=-sinf(degToRad(pa)+(float )M_PI/2);
     pdx3=cosf(degToRad(pa)-(float )(M_PI/2));  pdy3=-sinf(degToRad(pa)-(float )(M_PI/2));
     //init player
-    mapW[19]=54; mapW[26]=54; //close doors
 
     sp[0].type=1; sp[0].state=1; sp[0].map=0; sp[0].x=1.5f*64; sp[0].y=5*64;   sp[0].z=20; //key
     sp[1].type=2; sp[1].state=1; sp[1].map=1; sp[1].x=1.5f*64; sp[1].y=4.5f*64; sp[1].z= 0; //light 1
@@ -477,14 +476,14 @@ void init()//init all variables when game starts
 
 void shootPistolAnimation(BITMAP *buffer,BITMAP **animations, int frame)
 {
-    draw_sprite(buffer,animations[frame],300,150);
+    draw_sprite(buffer,animations[frame],300,0);
     line(buffer,SCREEN_W/2-10,SCREEN_H/2,SCREEN_W/2+10,SCREEN_H/2, makecol(255,0,0));
     line(buffer,SCREEN_W/2,SCREEN_H/2-10,SCREEN_W/2,SCREEN_H/2+10, makecol(255,0,0));
 }
 
 void reloadPistolAnimation(BITMAP *buffer,BITMAP **animations, int frame)
 {
-    draw_sprite(buffer,animations[frame],300,150);
+    draw_sprite(buffer,animations[frame],300,0);
     line(buffer,SCREEN_W/2-10,SCREEN_H/2,SCREEN_W/2+10,SCREEN_H/2, makecol(255,0,0));
     line(buffer,SCREEN_W/2,SCREEN_H/2-10,SCREEN_W/2,SCREEN_H/2+10, makecol(255,0,0));
 }
@@ -504,8 +503,8 @@ void Button(int *MapW)                                  //keyboard button presse
     int ipy3=(int)(py/64.0), ipy_add_yo3=((int)py+yo3)/64, ipy_subb_yo3=((int)py-yo3)/64;
     int mouseTurn=mouseTurnX();
 
-    if(mouseTurn==2){ pa+=15; pa= FixAng(pa); pdx=cosf(degToRad(pa)); pdy=-sinf(degToRad(pa)); pdx2=cosf(degToRad(pa)+(float )(M_PI/2));  pdy2=-sinf(degToRad(pa)+(float )(M_PI/2)); pdx3=cosf(degToRad(pa)-(float )(M_PI/2));  pdy3=-sinf(degToRad(pa)-(float )(M_PI/2)); }
-    if(mouseTurn==1){ pa-=15; pa= FixAng(pa) ;pdx=cosf(degToRad(pa)); pdy=-sinf(degToRad(pa)); pdx2=cosf(degToRad(pa)+(float )(M_PI/2));  pdy2=-sinf(degToRad(pa)+(float )(M_PI/2)); pdx3=cosf(degToRad(pa)-(float )(M_PI/2));  pdy3=-sinf(degToRad(pa)-(float )(M_PI/2)); }
+    if(mouseTurn==2){ pa+=10; pa= FixAng(pa); pdx=cosf(degToRad(pa)); pdy=-sinf(degToRad(pa)); pdx2=cosf(degToRad(pa)+(float )(M_PI/2));  pdy2=-sinf(degToRad(pa)+(float )(M_PI/2)); pdx3=cosf(degToRad(pa)-(float )(M_PI/2));  pdy3=-sinf(degToRad(pa)-(float )(M_PI/2)); }
+    if(mouseTurn==1){ pa-=10; pa= FixAng(pa) ;pdx=cosf(degToRad(pa)); pdy=-sinf(degToRad(pa)); pdx2=cosf(degToRad(pa)+(float )(M_PI/2));  pdy2=-sinf(degToRad(pa)+(float )(M_PI/2)); pdx3=cosf(degToRad(pa)-(float )(M_PI/2));  pdy3=-sinf(degToRad(pa)-(float )(M_PI/2)); }
 
 
     if(key[KEY_W]){

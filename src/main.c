@@ -73,7 +73,7 @@ int mapW[]=          //walls
                 19,19,19,19,20,20,20,20,
                 6,0,0,19,0,0,0,20,
                 19,0,0,19,0,19,0,20,
-                19,20,54,20,0,0,0,20,
+                19,19,54,20,0,0,0,20,
                 20,0,0,0,0,0,0,19,
                 20,0,0,0,0,20,0,19,
                 20,0,0,0,0,0,0,19,
@@ -111,9 +111,9 @@ int mapC[]=          //ceiling
                 20,20,20,20,20,20,20,20,
                 20,0,0,20,20,0,20,20,
                 20,0,0,20,20,0,20,20,
-                20,20,20,20,20,20,20,20,
-                20,20,20,20,20,20,20,20,
-                20,20,20,20,20,20,20,20,
+                20,20,20,0,20,20,20,20,
+                20,20,20,0,20,20,20,20,
+                20,20,20,0,20,20,20,20,
         };
 
 
@@ -321,9 +321,9 @@ void drawRays2D(BITMAP *buffer, int *MapW)
 
         float shade=1;
         if(disV<disH){ hmt=vmt; shade=0.5f; rx=vx; ry=vy; disH=disV; }//horizontal hit first
+        line(buffer,px/2,py/2,rx/2,ry/2, makecol(0,255,0));
 
-
-        int ca=(int)FixAng(pa-ra); disH=disH*cosf(degToRad((float)ca));                            //fix fisheye
+        int ca=(int)FixAng(pa-ra); disH=disH*cosf(degToRad((float)ca));                  //fix fisheye
         int lineH =(int)((mapS*640.0f)/(disH));
         float ty_step=32.0f/(float)lineH;
         float ty_off=0;
@@ -356,8 +356,8 @@ void drawRays2D(BITMAP *buffer, int *MapW)
             mp=mapF[(int)(ty/32.0)*mapX+(int)(tx/32.0)]*32*32;
             int pixel=(((int)(ty)&31)*32 + ((int)(tx)&31))*3+mp*3;
             int red   =(int)((float )All_Textures2[pixel+0]*0.7);
-            int green =(int)((float )All_Textures2[pixel+0]*0.7);
-            int blue  =(int)((float )All_Textures2[pixel+0]*0.7);
+            int green =(int)((float )All_Textures2[pixel+1]*0.7);
+            int blue  =(int)((float )All_Textures2[pixel+2]*0.7);
             rectfill(buffer,r*8,y,r*8+8,y+8, makecol(red,green,blue));
 
             //---draw ceiling---
